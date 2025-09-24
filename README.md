@@ -1,36 +1,69 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+## Overview
 
-## Getting Started
+Small Next.js (App Router) repo reproducing an Auth0 cookie/session issue.
 
-First, run the development server:
+Main pieces:
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- `src/lib/auth0.ts`: Auth0 client configuration with helpers (getSession, getAccessToken).
+- `src/middleware.ts`: Protects routes, redirects unauthenticated users to `/api/auth/login`.
+- `src/app/api/token/rotate/route.ts`: Triggers `getAccessToken()` to rotate/refresh tokens.
+- `src/app/page.tsx`: Simple UI with logout and buttons to hit APIs.
+
+## Purpose of this repo
+
+Reproduce and isolate problems where the Auth0 NextJS SDK on accessToken rotation (with configured multi-domain suport via AUTH0_COOKIE_DOMAIN) instead of updating existing session cookies creates a new one session.
+
+## Prerequisites
+
+- Node.js 18+
+- pnpm
+- Auth0 application (Client ID/Secret, domain)
+
+## Environment
+
+Create `.env` with:
+
+```
+AUTH0_DOMAIN=https://your-tenant.auth0.com
+AUTH0_CLIENT_ID=...
+AUTH0_CLIENT_SECRET=...
+AUTH0_SECRET=...
+AUTH0_AUDIENCE=... # API audience (in auth0 dashboard under Applications -> APIs )
+AUTH0_COOKIE_DOMAIN=.dev.domain.com
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Update your Auth0 application settings:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- Allowed Callback URLs: `http://local.dev.domain.com:4000/auth/callback`, `http://local.dev.domain.com:4000`
+- Allowed Logout URLs: `http://local.dev.domain.com:4000/auth/login`, `http://local.dev.domain.com:4000`
+- Allowed Web Origins: `http://local.dev.domain.com:4000`
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Install dependencies
 
-## Learn More
+```
+pnpm install
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Run locally on local.dev.domain.com
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Add local.dev.domain.com to your /etc/hosts
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+So the domain points to your local machine:
 
-## Deploy on Vercel
+```
+sudo nano /etc/hosts
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Add this line if it’s not already there:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```
+127.0.0.1 local.dev.domain.com
+```
+
+👉 Note: Next.js CLI actually uses `--hostname` under the hood. To run the website on custom local domain, use:
+
+```
+npx next dev --hostname local.dev.domain.com --port 4000
+```
+
+Then open `https://local.dev.domain.com`.
